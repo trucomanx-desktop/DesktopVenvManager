@@ -4,6 +4,7 @@
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -42,7 +43,7 @@ CONFIG = {
     "btn_refresh_tooltip": "Recheck registered folders and update their Python versions and disk usage.",
     "refresh_progress_tooltip": "Shows how many saved environments have been checked during refresh.",
     "btn_terminal_text": "Open Terminal",
-    "btn_terminal_tooltip": "Open a terminal at the selected environment folder with its activation command ready.",
+    "btn_terminal_tooltip": "Open a terminal in your home folder and activate the selected environment, if any.",
     "btn_remove_text": "Remove from List",
     "btn_remove_tooltip": "Confirm removal of the selected environment and deletion of its folder from disk.",
     "column_name": "Name",
@@ -110,7 +111,8 @@ CONFIG = {
     "file_dialog_directory": "Select Folder",
     "python_unknown": "Unknown",
     "size_zero": "0 B",
-    "terminal_command": "bash",
+    "terminal_command": "gnome-terminal -- bash -c 'bash --rcfile <(echo \"source ~/.bashrc; source ${ENVIRONMENT_PATH}\") -i'",
+    "terminal_command_no_environment": "gnome-terminal -- bash -c 'bash --rcfile <(echo \"source ~/.bashrc\") -i'",
     "terminal_working_directory": "Open terminal in the environment folder",
     "table_tooltip": "Registered virtual environments. Select a row to view its details below.",
     "no_terminal_error": "No terminal command is available.",
@@ -345,7 +347,7 @@ class MainWindow(QMainWindow):
         buttons_row = QHBoxLayout()
         self.terminal_button = self._button("btn_terminal_text", "btn_terminal_tooltip", "utilities-terminal")
         self.remove_button = self._button("btn_remove_text", "btn_remove_tooltip", "edit-delete")
-        self.terminal_button.setEnabled(False)
+        self.terminal_button.setEnabled(True)
         self.remove_button.setEnabled(False)
         buttons_row.addWidget(self.terminal_button)
         buttons_row.addWidget(self.remove_button)
@@ -523,7 +525,7 @@ class MainWindow(QMainWindow):
                 if not env.get("valid"):
                     item.setForeground(QColor("#c62828"))
                 self.table.setItem(row, col, item)
-            self.table.item(row, 0).setData(Qt.UserRole, row)
+            self.table.item(row, 0).setData(Qt.UserRole, env["path"])
         self.table.setSortingEnabled(True)
 
     def selected_environment(self):
@@ -531,13 +533,13 @@ class MainWindow(QMainWindow):
         if row < 0:
             return None
         item = self.table.item(row, 0)
-        index = item.data(Qt.UserRole) if item else None
-        if not isinstance(index, int) or index >= len(self.environments):
-            # Sorting changes visual row order; identify the record by its unique path.
-            name = item.text() if item else None
-            matches = [env for env in self.environments if env.get("name") == name]
-            return matches[0] if matches else None
-        return self.environments[index]
+        path = item.data(Qt.UserRole) if item else None
+        if path:
+            match = next((env for env in self.environments
+                          if os.path.realpath(env["path"]) == os.path.realpath(path)), None)
+            if match:
+                return match
+        return None
 
     def on_selection_changed(self):
         self.edit_details_checkbox.blockSignals(True)
@@ -583,7 +585,7 @@ class MainWindow(QMainWindow):
     def update_details(self):
         env = self.selected_environment()
         enabled = env is not None
-        self.terminal_button.setEnabled(bool(env and env.get("valid")))
+        self.terminal_button.setEnabled(True)
         self.remove_button.setEnabled(enabled)
         self.edit_details_checkbox.setEnabled(enabled)
         if not env:
@@ -656,26 +658,19 @@ class MainWindow(QMainWindow):
 
     def open_terminal(self):
         env = self.selected_environment()
-        if not env or not env.get("valid"):
-            return
-        folder = str(Path(env["path"]).expanduser().resolve())
-        activation = str(Path(folder) / "bin" / "activate")
-        shell = CONFIG["terminal_command"]
-        terminal = shutil.which(shell) if Path(shell).name != "bash" else None
-        terminal = terminal or shutil.which("x-terminal-emulator") or shutil.which("gnome-terminal") or shutil.which("konsole") or shutil.which("xterm")
-        try:
-            command = f"cd {shlex_quote(folder)} && source {shlex_quote(activation)} && exec bash -i"
-            if terminal and Path(terminal).name in ("x-terminal-emulator", "gnome-terminal", "konsole", "xterm"):
-                args = ["-e", "bash", "-lc", command] if Path(terminal).name != "gnome-terminal" else ["--", "bash", "-lc", command]
-                QProcess.startDetached(terminal, args, folder)
-            elif terminal and Path(shell).name != "bash":
-                QProcess.startDetached(terminal, ["-lc", command], folder)
-            elif shutil.which("bash"):
-                QProcess.startDetached(shutil.which("bash"), ["-lc", command], folder)
+        if env:
+            path = Path(env["path"]).expanduser()
+            if path.is_dir() and is_venv(path):
+                activation = str(path.resolve() / "bin" / "activate")
+                command = CONFIG["terminal_command"].replace(
+                    "${ENVIRONMENT_PATH}", shlex.quote(activation)
+                )
             else:
-                raise OSError(CONFIG["no_terminal_error"])
-        except OSError as error:
-            QMessageBox.critical(self, CONFIG["error_title"], CONFIG["terminal_error_template"].format(error=error))
+                command = CONFIG["terminal_command_no_environment"]
+        else:
+            command = CONFIG["terminal_command_no_environment"]
+        parts = shlex.split(command)
+        QProcess.startDetached(parts[0], parts[1:], str(Path.home()))
 
     def remove_environment(self):
         env = self.selected_environment()
@@ -708,8 +703,6 @@ class MainWindow(QMainWindow):
 
 
 def shlex_quote(value):
-    # Quote shell arguments without introducing another dependency.
-    import shlex
     return shlex.quote(value)
 
 
