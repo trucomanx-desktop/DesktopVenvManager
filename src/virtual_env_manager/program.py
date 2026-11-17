@@ -10,11 +10,11 @@ import sys
 from pathlib import Path
 
 from PyQt5.QtCore import Qt, QProcess
-from PyQt5.QtGui import QColor, QIcon, QDesktopServices
+from PyQt5.QtGui import QColor, QIcon, QDesktopServices, QPalette
 from PyQt5.QtWidgets import (
     QApplication, QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
     QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMainWindow, QMessageBox,
-    QPushButton, QComboBox, QTableWidget, QTableWidgetItem, QTextEdit,
+    QPushButton, QCheckBox, QComboBox, QTableWidget, QTableWidgetItem, QTextEdit,
     QVBoxLayout, QSizePolicy, QAction, QWidget, QProgressBar,
 )
 
@@ -58,6 +58,9 @@ CONFIG = {
     "status_valid": "Valid",
     "status_missing": "Invalid / Missing",
     "details_title": "Environment Details",
+    "edit_details_text": "Edit name and description",
+    "edit_details_tooltip": "Enable editing for the selected environment name and description.",
+    "error_empty_name": "The environment name cannot be empty.",
     "detail_name": "Name",
     "detail_description": "Description",
     "detail_path": "Full Path",
@@ -310,7 +313,14 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.table, 1)
         self.details_title = QLabel(CONFIG["details_title"])
         self.details_title.setStyleSheet("font-size: 16px; font-weight: 600; margin-top: 8px;")
-        layout.addWidget(self.details_title)
+        details_header = QHBoxLayout()
+        details_header.addWidget(self.details_title)
+        details_header.addStretch(1)
+        self.edit_details_checkbox = QCheckBox(CONFIG["edit_details_text"])
+        self.edit_details_checkbox.setToolTip(CONFIG["edit_details_tooltip"])
+        self.edit_details_checkbox.toggled.connect(self.toggle_detail_editing)
+        details_header.addWidget(self.edit_details_checkbox)
+        layout.addLayout(details_header)
         self.details = {}
         details_form = QFormLayout()
         fields = (("name", "detail_name", "detail_name_tooltip"), ("description", "detail_description", "detail_description_tooltip"),
@@ -319,11 +329,18 @@ class MainWindow(QMainWindow):
         for key, label_key, tip_key in fields:
             label = QLabel(CONFIG[label_key])
             label.setToolTip(CONFIG[tip_key])
-            value = QLineEdit()
-            value.setReadOnly(True)
+            if key in ("name", "description"):
+                value = QLineEdit()
+                value.setReadOnly(True)
+                value.editingFinished.connect(self.save_detail_edits)
+            else:
+                value = QLabel()
+                value.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
+                value.setWordWrap(True)
             value.setToolTip(CONFIG[tip_key])
             details_form.addRow(label, value)
             self.details[key] = value
+        self.toggle_detail_editing(False)
         layout.addLayout(details_form)
         buttons_row = QHBoxLayout()
         self.terminal_button = self._button("btn_terminal_text", "btn_terminal_tooltip", "utilities-terminal")
@@ -340,7 +357,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.total_label)
         self.terminal_button.clicked.connect(self.open_terminal)
         self.remove_button.clicked.connect(self.remove_environment)
-        self.table.itemSelectionChanged.connect(self.update_details)
+        self.table.itemSelectionChanged.connect(self.on_selection_changed)
         self.refresh()
 
     def _create_toolbar(self):
@@ -522,11 +539,53 @@ class MainWindow(QMainWindow):
             return matches[0] if matches else None
         return self.environments[index]
 
+    def on_selection_changed(self):
+        self.edit_details_checkbox.blockSignals(True)
+        self.edit_details_checkbox.setChecked(False)
+        self.edit_details_checkbox.blockSignals(False)
+        self.toggle_detail_editing(False)
+        self.update_details()
+
+    def toggle_detail_editing(self, enabled):
+        theme_palette = QApplication.palette()
+        background_role = QPalette.Base if enabled else QPalette.AlternateBase
+        border_role = QPalette.Highlight if enabled else QPalette.Mid
+        background_color = theme_palette.color(background_role)
+        border_color = theme_palette.color(border_role)
+        border_width = "2px" if enabled else "1px"
+        for key in ("name", "description"):
+            field = self.details[key]
+            field.setReadOnly(not enabled)
+            field_palette = field.palette()
+            field_palette.setColor(QPalette.Base, background_color)
+            field.setPalette(field_palette)
+            field.setStyleSheet(
+                f"QLineEdit {{ border: {border_width} solid {border_color.name()}; }}"
+            )
+
+    def save_detail_edits(self):
+        env = self.selected_environment()
+        if not env:
+            return
+        name = self.details["name"].text().strip()
+        if not name:
+            QMessageBox.warning(self, CONFIG["warning_title"], CONFIG["error_empty_name"])
+            self.details["name"].setText(env.get("name", ""))
+            return
+        env["name"] = name
+        env["description"] = self.details["description"].text().strip()
+        self._save()
+        row = self.table.currentRow()
+        if row >= 0:
+            self.table.item(row, 0).setText(name)
+            self.table.item(row, 1).setText(env["description"])
+
     def update_details(self):
         env = self.selected_environment()
         enabled = env is not None
         self.terminal_button.setEnabled(bool(env and env.get("valid")))
         self.remove_button.setEnabled(enabled)
+        self.edit_details_checkbox.setEnabled(enabled)
         if not env:
             for value in self.details.values():
                 value.clear()
