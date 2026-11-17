@@ -120,8 +120,8 @@ CONFIG = {
     "no_terminal_error": "No terminal command is available.",
 }
 
-CONFIG_DIR = Path.home() / ".config" / "virtual_env_manager"
-CONFIG_FILE = CONFIG_DIR / "config.json"
+ENVIRONMENTS_DIR = Path.home() / ".config" / about.__package__
+ENVIRONMENTS_FILE = ENVIRONMENTS_DIR / "environments.json"
 
 
 def is_venv(path):
@@ -440,7 +440,7 @@ class MainWindow(QMainWindow):
             subprocess.run(['xdg-open', filepath])
     
     def open_configure_editor(self):
-        self._open_file_in_text_editor(CONFIG_FILE.as_posix())
+        self._open_file_in_text_editor(ENVIRONMENTS_FILE.as_posix())
 
     def open_about(self):
         data={
@@ -468,17 +468,17 @@ class MainWindow(QMainWindow):
 
     def _load(self):
         try:
-            data = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+            data = json.loads(ENVIRONMENTS_FILE.read_text(encoding="utf-8"))
             if isinstance(data, list):
                 self.environments = [item for item in data if isinstance(item, dict) and item.get("path")]
         except (OSError, json.JSONDecodeError):
             self.environments = []
 
     def _save(self):
-        CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-        temporary = CONFIG_FILE.with_suffix(".json.tmp")
+        ENVIRONMENTS_DIR.mkdir(parents=True, exist_ok=True)
+        temporary = ENVIRONMENTS_FILE.with_suffix(".json.tmp")
         temporary.write_text(json.dumps(self.environments, indent=2, ensure_ascii=False), encoding="utf-8")
-        temporary.replace(CONFIG_FILE)
+        temporary.replace(ENVIRONMENTS_FILE)
 
     def refresh(self):
         total = len(self.environments)
@@ -691,7 +691,7 @@ class MainWindow(QMainWindow):
         try:
             if path.exists():
                 resolved = path.resolve()
-                if resolved in (Path("/").resolve(), Path.home().resolve(), CONFIG_DIR.resolve()):
+                if resolved in (Path("/").resolve(), Path.home().resolve(), ENVIRONMENTS_DIR.resolve()):
                     QMessageBox.warning(self, CONFIG["warning_title"], CONFIG["error_unsafe_delete"])
                     return
                 if path.is_symlink():
