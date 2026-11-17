@@ -15,7 +15,7 @@ from PyQt5.QtWidgets import (
     QApplication, QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
     QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMainWindow, QMessageBox,
     QPushButton, QComboBox, QTableWidget, QTableWidgetItem, QTextEdit,
-    QVBoxLayout, QSizePolicy, QAction, QWidget,
+    QVBoxLayout, QSizePolicy, QAction, QWidget, QProgressBar,
 )
 
 import virtual_env_manager.about as about
@@ -40,6 +40,7 @@ CONFIG = {
     "btn_import_tooltip": "Add an existing virtual environment from disk after validating its structure.",
     "btn_refresh_text": "Refresh",
     "btn_refresh_tooltip": "Recheck registered folders and update their Python versions and disk usage.",
+    "refresh_progress_tooltip": "Shows how many saved environments have been checked during refresh.",
     "btn_terminal_text": "Open Terminal",
     "btn_terminal_tooltip": "Open a terminal at the selected environment folder with its activation command ready.",
     "btn_remove_text": "Remove from List",
@@ -283,6 +284,7 @@ class MainWindow(QMainWindow):
         self._load()
         
         self._create_toolbar()
+        self._create_status_bar()
         
         # Gnerate GUI
         root = QWidget()
@@ -392,6 +394,15 @@ class MainWindow(QMainWindow):
         self.toolbar.orientationChanged.connect(self.on_update_spacer_policy)
         self.on_update_spacer_policy()
 
+    def _create_status_bar(self):
+        self.refresh_progress_bar = QProgressBar()
+        self.refresh_progress_bar.setToolTip(CONFIG["refresh_progress_tooltip"])
+        self.refresh_progress_bar.setRange(0, 100)
+        self.refresh_progress_bar.setValue(100)
+        self.refresh_progress_bar.setFixedWidth(180)
+        self.refresh_progress_bar.setTextVisible(True)
+        self.statusBar().addPermanentWidget(self.refresh_progress_bar)
+
     def on_update_spacer_policy(self):
         """Atualiza a política do espaçador baseado na orientação da toolbar"""
         if self.toolbar.orientation() == Qt.Horizontal:
@@ -449,19 +460,30 @@ class MainWindow(QMainWindow):
         temporary.replace(CONFIG_FILE)
 
     def refresh(self):
-        for env in self.environments:
-            path = Path(env["path"]).expanduser()
-            env["valid"] = is_venv(path)
-            if env["valid"]:
-                env["python_version"] = detect_python_version(path)
-                env["size_bytes"] = folder_size(path)
-            else:
-                env["python_version"] = env.get("python_version") or CONFIG["python_unknown"]
-                env["size_bytes"] = 0
-        self._save()
-        self.populate_table()
-        self.update_details()
-        self.total_label.setText(CONFIG["total_space_template"].format(size=format_size(sum(env.get("size_bytes", 0) for env in self.environments))))
+        total = len(self.environments)
+        self.refresh_action.setEnabled(False)
+        self.refresh_progress_bar.setRange(0, 100)
+        self.refresh_progress_bar.setValue(0)
+        try:
+            for index, env in enumerate(self.environments, start=1):
+                path = Path(env["path"]).expanduser()
+                env["valid"] = is_venv(path)
+                if env["valid"]:
+                    env["python_version"] = detect_python_version(path)
+                    env["size_bytes"] = folder_size(path)
+                else:
+                    env["python_version"] = env.get("python_version") or CONFIG["python_unknown"]
+                    env["size_bytes"] = 0
+                progress = int(index * 100 / total) if total else 100
+                self.refresh_progress_bar.setValue(progress)
+                QApplication.processEvents()
+            self._save()
+            self.populate_table()
+            self.update_details()
+            self.total_label.setText(CONFIG["total_space_template"].format(size=format_size(sum(env.get("size_bytes", 0) for env in self.environments))))
+            self.refresh_progress_bar.setValue(100)
+        finally:
+            self.refresh_action.setEnabled(True)
 
     def populate_table(self):
         self.table.setSortingEnabled(False)
