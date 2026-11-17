@@ -48,11 +48,13 @@ CONFIG = {
     "btn_remove_tooltip": "Confirm removal of the selected environment and deletion of its folder from disk.",
     "column_name": "Name",
     "column_description": "Description",
+    "column_path": "Path",
     "column_python": "Python Version",
     "column_size": "Disk Usage",
     "column_status": "Status",
     "column_name_tooltip": "The display name assigned to this virtual environment.",
     "column_description_tooltip": "A short note describing the purpose of this environment.",
+    "column_path_tooltip": "The full filesystem path of this virtual environment. Select and copy the path as needed.",
     "column_python_tooltip": "The Python interpreter version used by this environment.",
     "column_size_tooltip": "Total size of files currently stored inside the environment folder.",
     "column_status_tooltip": "Whether this folder currently contains a valid virtual environment.",
@@ -298,20 +300,20 @@ class MainWindow(QMainWindow):
         subtitle = QLabel(CONFIG["app_subtitle"])
         subtitle.setStyleSheet("color: palette(mid); margin-bottom: 8px;")
         layout.addWidget(subtitle)
-        self.table = QTableWidget(0, 5)
-        self.table.setHorizontalHeaderLabels([CONFIG[key] for key in ("column_name", "column_description", "column_python", "column_size", "column_status")])
-        for column, tooltip_key in enumerate(("column_name_tooltip", "column_description_tooltip", "column_python_tooltip", "column_size_tooltip", "column_status_tooltip")):
+        self.table = QTableWidget(0, 6)
+        self.table.setHorizontalHeaderLabels([CONFIG[key] for key in ("column_name", "column_description", "column_path", "column_python", "column_size", "column_status")])
+        for column, tooltip_key in enumerate(("column_name_tooltip", "column_description_tooltip", "column_path_tooltip", "column_python_tooltip", "column_size_tooltip", "column_status_tooltip")):
             self.table.horizontalHeaderItem(column).setToolTip(CONFIG[tooltip_key])
         self.table.setToolTip(CONFIG["table_tooltip"])
         self.table.setSelectionBehavior(QTableWidget.SelectRows)
         self.table.setSelectionMode(QTableWidget.SingleSelection)
         self.table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.table.setSortingEnabled(True)
-        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-        self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
-        self.table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
-        self.table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        header = self.table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.Interactive)
+        header.setStretchLastSection(False)
+        for column, width in enumerate((150, 200, 280, 110, 110, 130)):
+            self.table.setColumnWidth(column, width)
         layout.addWidget(self.table, 1)
         self.details_title = QLabel(CONFIG["details_title"])
         self.details_title.setStyleSheet("font-size: 16px; font-weight: 600; margin-top: 8px;")
@@ -508,16 +510,16 @@ class MainWindow(QMainWindow):
         self.table.setSortingEnabled(False)
         self.table.setRowCount(len(self.environments))
         for row, env in enumerate(self.environments):
-            values = (env.get("name", Path(env["path"]).name), env.get("description", ""),
+            values = (env.get("name", Path(env["path"]).name), env.get("description", ""), env["path"],
                       env.get("python_version", CONFIG["python_unknown"]), format_size(env.get("size_bytes", 0)),
                       CONFIG["status_valid"] if env.get("valid") else CONFIG["status_missing"])
             for col, value in enumerate(values):
                 item = SortableItem(value)
-                item.setToolTip((CONFIG[("column_name_tooltip", "column_description_tooltip", "column_python_tooltip", "column_size_tooltip", "column_status_tooltip")[col]]))
-                if col == 3:
+                item.setToolTip(CONFIG[("column_name_tooltip", "column_description_tooltip", "column_path_tooltip", "column_python_tooltip", "column_size_tooltip", "column_status_tooltip")[col]])
+                if col == 4:
                     item.setData(Qt.UserRole, env.get("size_bytes", 0))
                     item.setData(Qt.UserRole + 1, env.get("size_bytes", 0))
-                elif col == 2:
+                elif col == 3:
                     try:
                         item.setData(Qt.UserRole + 1, tuple(int(part) for part in value.split(".")))
                     except ValueError:
