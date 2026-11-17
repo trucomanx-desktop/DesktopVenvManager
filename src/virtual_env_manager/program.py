@@ -5,6 +5,7 @@ import json
 import os
 import re
 import shlex
+import signal
 import shutil
 import subprocess
 import sys
@@ -25,7 +26,7 @@ from virtual_env_manager.modules.resources import resource_path
 
 from virtual_env_manager.modules.wabout    import show_about_window
 
-CONFIG = {
+DEFAULT_CONTENT = {
     "toolbar_configure": "Configure",
     "toolbar_configure_tooltip": "Open the configure Json file of program GUI",
     "toolbar_about": "About",
@@ -123,6 +124,14 @@ CONFIG = {
 ENVIRONMENTS_DIR = Path.home() / ".config" / about.__package__
 ENVIRONMENTS_FILE = ENVIRONMENTS_DIR / "environments.json"
 
+# ---------- Path to config file ----------
+CONFIG_PATH = os.path.join( os.path.expanduser("~"),
+                            ".config", 
+                            about.__package__, 
+                            "config.json" )
+configure.verify_default_config(CONFIG_PATH,default_content=DEFAULT_CONTENT)
+
+CONFIG=configure.load_config(CONFIG_PATH)
 
 def is_venv(path):
     """Return true if path has the standard Linux venv activation and interpreter files."""
@@ -709,12 +718,45 @@ def shlex_quote(value):
 
 
 def main():
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+       
+    #ensure_mime_type("npy", "application/x-npy", "NumPy array file")
+    icon_path=resource_path("icons", "logo.png")
+    extras="" # "MimeType=text/vnd.graphviz;" # "MimeType=application/x-npy;"
+    
+    create_desktop_directory()    
+    create_desktop_menu()
+    create_desktop_file(os.path.join("~",".local","share","applications"), 
+                        program_name=about.__program_name__,
+                        extras=extras,
+                        icon_path=icon_path)
+    
+    for n in range(len(sys.argv)):
+        if sys.argv[n] == "--autostart":
+            create_desktop_directory(overwrite = True)
+            create_desktop_menu(overwrite = True)
+            create_desktop_file(os.path.join("~",".config","autostart"), 
+                                overwrite=True, 
+                                program_name=about.__program_name__,
+                                extras=extras,
+                                icon_path=icon_path)
+            return
+        if sys.argv[n] == "--applications":
+            create_desktop_directory(overwrite = True)
+            create_desktop_menu(overwrite = True)
+            create_desktop_file(os.path.join("~",".local","share","applications"), 
+                                overwrite=True, 
+                                program_name=about.__program_name__,
+                                extras=extras,
+                                icon_path=icon_path)
+            return
+
     app = QApplication(sys.argv)
     app.setApplicationName(about.__program_name__)
     window = MainWindow()
     window.show()
-    return app.exec_()
+    sys.exit(app.exec_())
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()
