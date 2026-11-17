@@ -18,10 +18,10 @@ cd src
 
 
 ## ubuntu ##
-python3 -m PyInstaller --onefile --windowed --name virtual-env-manager --add-data "virtual_env_manager/icons:icons" --collect-all PyQt5  program_launcher.py
+python3 -m PyInstaller --onefile --windowed --name desktop-venv-manager --add-data "desktop_venv_manager/icons:icons" --collect-all PyQt5  program_launcher.py
 
 ## windows ##
-python -m PyInstaller --onefile --windowed --name virtual-env-manager --add-data "virtual_env_manager/icons;icons" --collect-all PyQt5  program_launcher.py
+python -m PyInstaller --onefile --windowed --name desktop-venv-manager --add-data "desktop_venv_manager/icons;icons" --collect-all PyQt5  program_launcher.py
 
 '''
 
@@ -32,7 +32,7 @@ os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(
     QLibraryInfo.PluginsPath
 )
 
-from virtual_env_manager.program import main
+from desktop_venv_manager.program import main
 
 if __name__ == "__main__":
     main()

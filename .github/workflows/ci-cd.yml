@@ -68,8 +68,8 @@ jobs:
         run: |
           cd src
           python -m PyInstaller --onefile --windowed \
-            --name virtual-env-manager \
-            --add-data "virtual_env_manager/icons:icons" \
+            --name desktop-venv-manager \
+            --add-data "desktop_venv_manager/icons:icons" \
             --collect-all PyQt5 \
             program_launcher.py
 
@@ -79,8 +79,8 @@ jobs:
         run: |
           cd src
           python -m PyInstaller --onefile --windowed `
-            --name virtual-env-manager `
-            --add-data "virtual_env_manager/icons;icons" `
+            --name desktop-venv-manager `
+            --add-data "desktop_venv_manager/icons;icons" `
             --collect-all PyQt5 `
             program_launcher.py
 

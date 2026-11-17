@@ -20,11 +20,11 @@ from PyQt5.QtWidgets import (
     QVBoxLayout, QSizePolicy, QAction, QWidget, QProgressBar,
 )
 
-import virtual_env_manager.about as about
-import virtual_env_manager.modules.configure as configure 
-from virtual_env_manager.modules.resources import resource_path
+import desktop_venv_manager.about as about
+import desktop_venv_manager.modules.configure as configure 
+from desktop_venv_manager.modules.resources import resource_path
 
-from virtual_env_manager.modules.wabout    import show_about_window
+from desktop_venv_manager.modules.wabout    import show_about_window
 
 DEFAULT_CONTENT = {
     "toolbar_configure": "Configure",

@@ -8,12 +8,12 @@ from PyQt5.QtCore import Qt, QUrl
 from PyQt5.QtGui import QIcon, QDesktopServices
 
 
-import virtual_env_manager.about as about
-import virtual_env_manager.modules.configure as configure 
-from virtual_env_manager.modules.resources import resource_path
+import desktop_venv_manager.about as about
+import desktop_venv_manager.modules.configure as configure 
+from desktop_venv_manager.modules.resources import resource_path
 
-from virtual_env_manager.modules.wabout    import show_about_window
-from virtual_env_manager.desktop import create_desktop_file, create_desktop_directory, create_desktop_menu
+from desktop_venv_manager.modules.wabout    import show_about_window
+from desktop_venv_manager.desktop import create_desktop_file, create_desktop_directory, create_desktop_menu
 
 
 # ---------- Path to config file ----------

@@ -1,4 +1,4 @@
-# virtual-env-manager
+# desktop-venv-manager
 
 A local Linux desktop application for creating, importing, inspecting, and managing Python `venv` environments.
 

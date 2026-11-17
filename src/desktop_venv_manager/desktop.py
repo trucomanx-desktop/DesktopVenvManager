@@ -1,7 +1,7 @@
 import os
 import subprocess
-import virtual_env_manager.about as about
-from virtual_env_manager.modules.resources import resource_path
+import desktop_venv_manager.about as about
+from desktop_venv_manager.modules.resources import resource_path
 
 
 def update_desktop_database(desktop_path):

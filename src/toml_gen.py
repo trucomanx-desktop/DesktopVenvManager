@@ -7,7 +7,7 @@ import sys
 here = pathlib.Path(__file__).parent.resolve()
 sys.path.insert(0, str(here))
 
-from virtual_env_manager.about import (
+from desktop_venv_manager.about import (
     __version__,
     __package__,
     __program_name__,

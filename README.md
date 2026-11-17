@@ -1,4 +1,4 @@
-# virtual-env-manager
+# desktop-venv-manager
 
 A local Linux desktop application for creating, importing, inspecting, and managing Python `venv` environments.
 
@@ -6,37 +6,37 @@ A local Linux desktop application for creating, importing, inspecting, and manag
 
 ## 1. Installing
 
-To install the package from [PyPI](https://pypi.org/project/virtual_env_manager/), follow the instructions below:
+To install the package from [PyPI](https://pypi.org/project/desktop_venv_manager/), follow the instructions below:
 
 ### With pip
 
 ```bash
-pip install --upgrade virtual_env_manager
+pip install --upgrade desktop_venv_manager
 ```
 
-Execute `which virtual-env-manager` to see where it was installed, probably in `/home/USERNAME/.local/bin/virtual-env-manager`.
+Execute `which desktop-venv-manager` to see where it was installed, probably in `/home/USERNAME/.local/bin/desktop-venv-manager`.
 
 ### With pipx (recommended for desktop applications)
 
 ```bash
-pipx install virtual_env_manager
+pipx install desktop_venv_manager
 ```
 
-If you need to upgrade later: `pipx upgrade virtual_env_manager`
+If you need to upgrade later: `pipx upgrade desktop_venv_manager`
 
 ### Using
 
 To start, use the command below:
 
 ```bash
-virtual-env-manager
+desktop-venv-manager
 ```
 
-If you would like the program to initialize at the start of the Linux session, use `virtual-env-manager --autostart`.
+If you would like the program to initialize at the start of the Linux session, use `desktop-venv-manager --autostart`.
 
 ## 2. More information
 
-If you want more information go to [doc](https://github.com/trucomanx-desktop/VirtualEnvManager/blob/main/doc) directory
+If you want more information go to [doc](https://github.com/trucomanx-desktop/DesktopVenvManager/blob/main/doc) directory
 
 ## 3. Buy me a coffee
 
