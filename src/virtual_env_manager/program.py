@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 from PyQt5.QtCore import Qt, QProcess
-from PyQt5.QtGui import QColor, QIcon
+from PyQt5.QtGui import QColor, QIcon, QDesktopServices
 from PyQt5.QtWidgets import (
     QApplication, QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
     QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMainWindow, QMessageBox,
