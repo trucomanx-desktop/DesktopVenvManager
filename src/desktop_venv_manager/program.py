@@ -25,6 +25,8 @@ import desktop_venv_manager.modules.configure as configure
 from desktop_venv_manager.modules.resources import resource_path
 
 from desktop_venv_manager.modules.wabout    import show_about_window
+from desktop_venv_manager.desktop import create_desktop_file, create_desktop_directory, create_desktop_menu
+
 
 DEFAULT_CONTENT = {
     "toolbar_configure": "Configure",
