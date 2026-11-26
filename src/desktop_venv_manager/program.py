@@ -17,7 +17,7 @@ from PyQt5.QtWidgets import (
     QApplication, QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
     QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMainWindow, QMessageBox,
     QPushButton, QCheckBox, QComboBox, QTableWidget, QTableWidgetItem, QTextEdit,
-    QVBoxLayout, QSizePolicy, QAction, QWidget, QProgressBar,
+    QVBoxLayout, QSizePolicy, QAction, QWidget, QProgressBar, QToolButton,
 )
 
 import desktop_venv_manager.about as about
@@ -73,6 +73,8 @@ DEFAULT_CONTENT = {
     "detail_python": "Python Version",
     "detail_size": "Disk Usage",
     "detail_activate": "Activation Command",
+    "copy_activation_tooltip": "Copy the activation command to the clipboard.",
+    "activation_copied": "Activation command copied to clipboard.",
     "detail_name_tooltip": "The saved display name for the selected environment.",
     "detail_description_tooltip": "The saved description for the selected environment.",
     "detail_path_tooltip": "The absolute filesystem path to this environment.",
@@ -228,7 +230,7 @@ class EnvironmentDialog(QDialog):
         self.path_edit = QLineEdit()
         self.path_edit.setToolTip(CONFIG["field_path_tooltip"])
         self.browse_button = QPushButton(CONFIG["browse_text"])
-        self.browse_button.setIcon(QIcon.fromTheme("folder-open"))
+        self.browse_button.setIcon(QIcon(resource_path("icons", "folder-open.png")))
         self.browse_button.setToolTip(CONFIG["browse_tooltip"])
         path_row = QWidget()
         path_layout = QHBoxLayout(path_row)
@@ -252,7 +254,7 @@ class EnvironmentDialog(QDialog):
         buttons = QDialogButtonBox(QDialogButtonBox.Cancel)
         buttons.button(QDialogButtonBox.Cancel).setText(CONFIG["cancel_text"])
         self.accept_button = buttons.addButton(CONFIG["import_text"] if importing else CONFIG["create_text"], QDialogButtonBox.AcceptRole)
-        self.accept_button.setIcon(QIcon.fromTheme("list-add" if importing else "document-new"))
+        self.accept_button.setIcon(QIcon(resource_path("icons", "button_add_green.svg") if importing else resource_path("icons", "new_file.svg")))
         self.accept_button.setToolTip(CONFIG["btn_import_tooltip"] if importing else CONFIG["btn_new_tooltip"])
         buttons.rejected.connect(self.reject)
         buttons.accepted.connect(self.accept)
@@ -353,13 +355,33 @@ class MainWindow(QMainWindow):
                 value.setTextInteractionFlags(Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard)
                 value.setWordWrap(True)
             value.setToolTip(CONFIG[tip_key])
-            details_form.addRow(label, value)
+            if key == "activate":
+                value.setWordWrap(False)
+                activation_row = QWidget()
+                activation_row.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+                activation_layout = QHBoxLayout(activation_row)
+                activation_layout.setContentsMargins(0, 0, 0, 0)
+                activation_layout.addWidget(value)
+                self.copy_activation_button = QToolButton()
+                self.copy_activation_button.setIcon(QIcon(resource_path("icons", "edit-copy")))
+                self.copy_activation_button.setAutoRaise(True)
+                self.copy_activation_button.setToolTip(CONFIG["copy_activation_tooltip"])
+                self.copy_activation_button.clicked.connect(self.copy_activation_command)
+                activation_layout.addWidget(self.copy_activation_button)
+                activation_layout.addStretch(1)
+                details_form.addRow(label, activation_row)
+            else:
+                details_form.addRow(label, value)
             self.details[key] = value
         self.toggle_detail_editing(False)
         layout.addLayout(details_form)
         buttons_row = QHBoxLayout()
-        self.terminal_button = self._button("btn_terminal_text", "btn_terminal_tooltip", "utilities-terminal")
-        self.remove_button = self._button("btn_remove_text", "btn_remove_tooltip", "edit-delete")
+        self.terminal_button = self._button("btn_terminal_text", 
+                                            "btn_terminal_tooltip", 
+                                            resource_path("icons","utilities-terminal.png"))
+        self.remove_button = self._button(  "btn_remove_text", 
+                                            "btn_remove_tooltip", 
+                                            resource_path("icons","button_remove_red.svg"))
         self.terminal_button.setEnabled(True)
         self.remove_button.setEnabled(False)
         buttons_row.addWidget(self.terminal_button)
@@ -380,15 +402,25 @@ class MainWindow(QMainWindow):
         self.toolbar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
 
         # Primary environment actions
-        self.new_action = QAction(QIcon.fromTheme("list-add"), CONFIG["btn_new_text"], self)
+        self.new_action = QAction(  QIcon(resource_path("icons","button_add_green.svg")), 
+                                    CONFIG["btn_new_text"], 
+                                    self)
         self.new_action.setToolTip(CONFIG["btn_new_tooltip"])
         self.new_action.triggered.connect(self.create_environment)
         self.toolbar.addAction(self.new_action)
-        self.import_action = QAction(QIcon.fromTheme("folder-open"), CONFIG["btn_import_text"], self)
+        
+        #
+        self.import_action = QAction(   QIcon(resource_path("icons","folder-open.png")), 
+                                        CONFIG["btn_import_text"], 
+                                        self)
         self.import_action.setToolTip(CONFIG["btn_import_tooltip"])
         self.import_action.triggered.connect(self.import_environment)
         self.toolbar.addAction(self.import_action)
-        self.refresh_action = QAction(QIcon.fromTheme("view-refresh"), CONFIG["btn_refresh_text"], self)
+        
+        #
+        self.refresh_action = QAction(  QIcon(resource_path("icons","view-refresh.svg")), 
+                                        CONFIG["btn_refresh_text"], 
+                                        self)
         self.refresh_action.setToolTip(CONFIG["btn_refresh_tooltip"])
         self.refresh_action.triggered.connect(self.refresh)
         self.toolbar.addAction(self.refresh_action)
@@ -399,7 +431,7 @@ class MainWindow(QMainWindow):
         self.toolbar.addWidget(self.toolbar_spacer)
         
         #
-        self.configure_action = QAction(QIcon.fromTheme("document-properties"), 
+        self.configure_action = QAction(QIcon(resource_path("icons","document-page-setup.png")), 
                                         CONFIG["toolbar_configure"], 
                                         self)
         self.configure_action.setToolTip(CONFIG["toolbar_configure_tooltip"])
@@ -407,7 +439,7 @@ class MainWindow(QMainWindow):
         self.toolbar.addAction(self.configure_action)
         
         #
-        self.about_action = QAction(QIcon.fromTheme("help-about"), 
+        self.about_action = QAction(QIcon(resource_path("icons","status_help.png")), 
                                     CONFIG["toolbar_about"], 
                                     self)
         self.about_action.setToolTip(CONFIG["toolbar_about_tooltip"])
@@ -415,7 +447,7 @@ class MainWindow(QMainWindow):
         self.toolbar.addAction(self.about_action)
         
         # Coffee
-        self.coffee_action = QAction(   QIcon.fromTheme("emblem-favorite"), 
+        self.coffee_action = QAction(   QIcon(resource_path("icons","emote-love.png")), 
                                         CONFIG["toolbar_coffee"], 
                                         self)
         self.coffee_action.setToolTip(CONFIG["toolbar_coffee_tooltip"])
@@ -471,9 +503,9 @@ class MainWindow(QMainWindow):
     def on_coffee_action_click(self):
         QDesktopServices.openUrl(QUrl("https://ko-fi.com/trucomanx"))
 
-    def _button(self, text_key, tip_key, icon_name):
+    def _button(self, text_key, tip_key, icon_path):
         button = QPushButton(CONFIG[text_key])
-        button.setIcon(QIcon.fromTheme(icon_name))
+        button.setIcon(QIcon(icon_path))
         button.setToolTip(CONFIG[tip_key])
         return button
 
@@ -612,6 +644,13 @@ class MainWindow(QMainWindow):
                 "activate": f"source {shlex_quote(str(Path(path) / 'bin' / 'activate'))}" if env.get("valid") else ""}
         for key, value in data.items():
             self.details[key].setText(value)
+        self.copy_activation_button.setEnabled(bool(data["activate"]))
+
+    def copy_activation_command(self):
+        command = self.details["activate"].text()
+        if command:
+            QApplication.clipboard().setText(command)
+            self.statusBar().showMessage(CONFIG["activation_copied"], 3000)
 
     def create_environment(self):
         dialog = EnvironmentDialog(self)
